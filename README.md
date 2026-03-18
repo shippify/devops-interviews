@@ -1,4 +1,4 @@
-# Caso de uso (Candidato): A Lambda não consegue listar o S3 e não consegue acessar a API externa
+# Caso de uso : A Lambda não consegue listar o S3 e não consegue acessar a API externa
 
 ## Configuração obrigatória (faça antes)
 1. Faça um fork deste repositório.
@@ -41,7 +41,7 @@ Faça as mudanças necessárias para que, depois do seu commit e novo deploy:
   - IAM para a role de execução da Lambda
   - VPC/subnets/roteamento que afetam o egress da Lambda
 
-## Dicas (sem entregar a solução completa)
+## Dicas
 1. **Se você receber erro de handler/módulo**
    - A imagem do container provavelmente não está colocando o handler no local esperado pelo runtime da Lambda.
 2. **Se você ver `AccessDenied` no S3**
@@ -49,7 +49,7 @@ Faça as mudanças necessárias para que, depois do seu commit e novo deploy:
 3. **Se você vir timeouts ao chamar uma URL HTTPS externa**
    - A Lambda roda dentro de subnets da VPC; confirme que ela tem acesso de saída para a internet via HTTPS.
 
-## Critério de sucesso (Definition of Done)
+## Critério de sucesso
 Seu envio é bem-sucedido quando, no teste da Lambda no AWS Console:
 - a Lambda retorna uma resposta sem erros de runtime/import,
 - e o payload JSON mostra sucesso na listagem do S3 + na chamada da API externa.
