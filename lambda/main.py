@@ -1,8 +1,3 @@
-"""
-Lambda that tries to:
-1. List S3 buckets (will fail: Access Denied if role has no s3:ListAllMyBuckets)
-2. Call an external API (will fail: timeout if Lambda is in VPC with no NAT)
-"""
 import json
 import urllib.request
 import boto3
@@ -15,7 +10,7 @@ EXTERNAL_API_URL = os.environ.get("EXTERNAL_API_URL", "https://httpbin.org/get")
 def handler(event, context):
     result = {"s3_list": None, "external_api": None, "errors": []}
 
-    # 1. Try to list ALL S3 buckets (expected to fail without s3:ListAllMyBuckets)
+    # 1. Try to list ALL S3 buckets
     try:
         print('Listing S3 buckets...')
         s3 = boto3.client("s3")
@@ -25,7 +20,7 @@ def handler(event, context):
         }
         print('S3 buckets listed successfully: ', result["s3_list"])
 
-        # Also list objects from our target bucket (expected to fail without s3:ListBucket)
+        # Also list objects from our target bucket
         if BUCKET_NAME:
             response = s3.list_objects_v2(Bucket=BUCKET_NAME, MaxKeys=5)
             result["s3_list"]["bucket_objects"] = {
