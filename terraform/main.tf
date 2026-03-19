@@ -25,10 +25,6 @@ data "aws_caller_identity" "current" {}
 
 # ---------------------------------------------------------------------------
 # Networking: dedicated VPC created once by Terraform state
-#
-# Broken behavior we want:
-# - Lambda in a subnet with NO default route -> external HTTPS times out
-# - S3 connectivity via Gateway VPC Endpoint -> S3 calls fail with IAM (AccessDenied)
 # ---------------------------------------------------------------------------
 
 data "aws_availability_zones" "available" {
@@ -76,7 +72,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private route table: NO default route (no NAT) -> Lambda cannot reach internet.
+# Private route table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   tags   = { Name = "${local.name}-private" }
@@ -87,7 +83,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# Allow S3 connectivity without requiring NAT (Gateway endpoint).
+# Allow S3 connectivity
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
@@ -97,14 +93,14 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 # ---------------------------------------------------------------------------
-# S3 bucket (Lambda will try to list objects; role has no S3 permissions)
+# S3 bucket
 # ---------------------------------------------------------------------------
 data "aws_s3_bucket" "data" {
   bucket = local.s3_bucket_name
 }
 
 # ---------------------------------------------------------------------------
-# Lambda: role with CloudWatch Logs only — no S3 permissions (cannot list buckets)
+# Lambda: role with CloudWatch Logs only
 # ---------------------------------------------------------------------------
 resource "aws_iam_role" "lambda" {
   name = local.lambda_role_name
@@ -118,7 +114,7 @@ resource "aws_iam_role" "lambda" {
   })
 }
 
-# Only basic execution (CloudWatch Logs). No S3 policy.
+# Only basic execution (CloudWatch Logs).
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
