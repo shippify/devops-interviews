@@ -1,55 +1,88 @@
-# Caso de uso : A Lambda não consegue listar o S3 e não consegue acessar a API externa
+# Use Case: Lambda não consegue listar S3 nem acessar API externa
 
-## Configuração obrigatória (faça antes)
-1. Faça um fork deste repositório.
-2. No seu fork, defina o secret do repositório:
-   - `AWS_ROLE_ARN` (usado pelo GitHub OIDC para assumir uma role de IAM na AWS)
-3. Envie seu usuário do GitHub ao entrevistador. O entrevistador vai adicionar permissões temporárias / atualizar as condições de trust do OIDC para que seu repositório do GitHub + branch consigam assumir a role e fazer o deploy.
+## Configuração obrigatória (faça isso primeiro)
+1. Faça um fork deste repositório.  
+2. No seu fork, configure o seguinte secret no GitHub:  
+   - `AWS_ROLE_ARN` (utilizado pelo GitHub OIDC para assumir uma role IAM na AWS)  
+3. Envie seu usuário do GitHub para o entrevistador.  
+   - O entrevistador irá conceder permissões temporárias e ajustar as condições de confiança do OIDC na AWS para permitir que seu repositório + branch assumam a role e façam o deploy.
+
+---
 
 ## Como executar (somente via GitHub)
-1. Crie/checkout uma branch chamada `fixes` no seu fork (criada a partir de `master`).
-2. Faça as alterações na branch `fixes` e dê push em `fixes` para disparar o workflow.
-3. Depois que o workflow terminar (deploy via Terraform), teste a Lambda diretamente no AWS Console (não há invoke automático no CI).
+1. Crie ou acesse uma branch chamada `fixes` no seu fork (baseada na `master`).  
+2. Faça as alterações necessárias na branch `fixes` e dê push para disparar o workflow.  
+3. Após a execução do workflow (deploy com Terraform), teste a Lambda diretamente no console da AWS (não há execução automática via CI).
+
+---
 
 ## O que você recebe
-Você terá um repositório público no GitHub que executa um assessment via GitHub Actions:
+Você terá acesso a um repositório público no GitHub que executa um assessment utilizando GitHub Actions:
 
-- O GitHub Actions faz deploy da infraestrutura na AWS com Terraform.
-- Ele cria uma **imagem de container** para uma função Lambda e faz o deploy.
+- O GitHub Actions realiza o deploy da infraestrutura AWS usando Terraform.  
+- Também faz o build de uma **imagem de container** para uma função Lambda e a publica.  
+- Além disso, será fornecido um usuário de AWS para que você possa testar e revisar os recursos diretamente no console da AWS.
 
-O repositório está **intencionalmente quebrado**. Seu trabalho é corrigir os problemas para que a Lambda funcione corretamente quando você testar no AWS Console.
+⚠️ O repositório foi propositalmente configurado com erros.  
+Seu objetivo é corrigir esses problemas para que a Lambda funcione corretamente ao ser testada no console da AWS.
 
-## O que está falhando (sintomas atuais)
-Quando você testar a Lambda (após o deploy), espere um ou mais destes problemas:
+---
 
-- **Falha no CI/deploy antes de o Terraform rodar (OIDC)**:
-  a execução falha na etapa de credenciais porque o GitHub OIDC não consegue assumir a role da AWS. Corrija as permissões do workflow para o OIDC funcionar.
-- **Erros relacionados ao S3** (por exemplo, `AccessDenied` ao listar buckets ou ao listar objetos dentro de um bucket).
-- **Erros da API externa** (por exemplo, timeouts / falhas de conexão ao acessar um endpoint HTTPS).
-- Possivelmente, **erros de container/runtime** (por exemplo, problemas de handler/módulo).
+## Problemas atuais (sintomas)
+Ao testar a Lambda após o deploy, você pode encontrar um ou mais dos seguintes problemas:
+
+- **Falha no CI/deploy antes do Terraform (OIDC)**  
+  - O workflow falha na etapa de credenciais AWS porque o OIDC do GitHub não consegue assumir a role.  
+  - É necessário corrigir as permissões do workflow.
+
+- **Erros relacionados ao S3**  
+  - Exemplo: `AccessDenied` ao listar buckets ou objetos.
+
+- **Erros ao acessar API externa**  
+  - Exemplo: timeout ou falha de conexão ao chamar um endpoint HTTPS.
+
+- **Possíveis erros de container/runtime**  
+  - Exemplo: problemas com handler ou importação de módulos.
+
+---
 
 ## Sua tarefa
-Faça as mudanças necessárias para que, depois do seu commit e novo deploy:
+Seu envio é bem-sucedido quando:
 
-1. A invocação da Lambda seja bem-sucedida.
+- O workflow do GitHub Actions for corrigido e executado com sucesso
+- Não houver erros de runtime ou na resposta da invocação da Lambda
+---
 
-## Onde olhar no repositório
+## Onde procurar no repositório
+- `.github/workflows`:
+  - `terraform.yml` (workflow para o deploy na AWS)  
+
 - `lambda/`:
-  - `Dockerfile` (build do container da Lambda)
-  - `main.py` (código do handler da Lambda)
+  - `Dockerfile` (build da imagem do container da Lambda)  
+  - `main.py` (código handler da Lambda)  
+
 - `terraform/`:
-  - IAM para a role de execução da Lambda
-  - VPC/subnets/roteamento que afetam o egress da Lambda
+  - Permissões IAM da role de execução da Lambda  
+  - Configuração de VPC, subnets e rotas (impactam acesso à internet)
+
+---
 
 ## Dicas
-1. **Se você receber erro de handler/módulo**
-   - A imagem do container provavelmente não está colocando o handler no local esperado pelo runtime da Lambda.
-2. **Se você ver `AccessDenied` no S3**
-   - Verifique as permissões da role de execução da Lambda necessárias pelo código em `lambda/main.py`.
-3. **Se você vir timeouts ao chamar uma URL HTTPS externa**
-   - A Lambda roda dentro de subnets da VPC; confirme que ela tem acesso de saída para a internet via HTTPS.
+1. **Permissões do GitHub Actions (OIDC)**  
+   Certifique-se de incluir as permissões corretas no workflow:
+   ```yaml
+   permissions:
+     contents: read
+     id-token: write
+     ```
+     Referência:
+https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-cloud-providers
 
-## Critério de sucesso
-Seu envio é bem-sucedido quando, no teste da Lambda no AWS Console:
-- a Lambda retorna uma resposta sem erros de runtime/import,
-- e o payload JSON mostra sucesso na listagem do S3 + na chamada da API externa.
+2.	**Erro de handler/import**
+	- Verifique se a imagem do container está estruturada corretamente.
+	- O handler precisa estar no caminho esperado pelo runtime da Lambda.
+3.	**Erro AccessDenied no S3**
+	- Revise as permissões da role IAM da Lambda conforme o que o código em lambda/main.py exige.
+4.	**Timeout ao acessar API externa**
+	- A Lambda está dentro de uma VPC.
+	- Verifique se há saída para a internet (NAT Gateway ou configuração equivalente).
